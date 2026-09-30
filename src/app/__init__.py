@@ -6,7 +6,7 @@ from app.routes.book import book
 app = FastAPI()
 
 origins = [
-    "http://localhost:8080",  # frontend
+    "http://localhost:5173",  # frontend
 ]
 
 app.add_middleware(

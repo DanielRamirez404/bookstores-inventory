@@ -4,7 +4,7 @@ import httpx
 from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
 from fastapi.routing import APIRouter
-from sqlalchemy import delete, insert, select, update
+from sqlalchemy import Numeric, cast, delete, func, insert, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -143,12 +143,15 @@ async def get_price(
         )
 
     rate = rates[currency]
-    calculated_price = round(price * 1.40 * rate, 2) # 40% de ganancia!!!
+    calculated_price_mult = round(1.40 * rate, 2) # 40% de ganancia!!!
 
     stmt = (
         update(Book)
         .where(Book.id == id)
-        .values(selling_price_local=calculated_price)
+        .values(selling_price_local=func.round(
+            cast(Book.cost_usd * calculated_price_mult, Numeric), 
+            2
+        ))
         .returning(Book)
     )
 
@@ -166,9 +169,9 @@ async def get_price(
         "book_id": updated_book.id,
         "cost_usd": updated_book.cost_usd,
         "exchange_rate": rate,
-        "cost_local": round(updated_book.cost_usdu * rate, 2),
+        "cost_local": round(float(updated_book.cost_usd) * rate, 2),
         "margin_percentage": 40,
-        "selling_price_local": calculated_price,
+        "selling_price_local": updated_book.selling_price_local,
         "currency": currency,
         "calculation_timestamp": updated_book.updated_at
     }
