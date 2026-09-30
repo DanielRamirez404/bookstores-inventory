@@ -1,5 +1,5 @@
 [project]
-name = "bookstores-inventory-api"
+name = "app"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -9,6 +9,9 @@ authors = [
 requires-python = ">=3.14"
 dependencies = [
     "fastapi[standard]>=0.142.2",
+    "psycopg>=3.3.6",
+    "python-dotenv>=1.2.3",
+    "sqlalchemy>=2.1.1",
 ]
 
 [project.scripts]
