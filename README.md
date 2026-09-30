@@ -146,6 +146,6 @@ El desarrollo expuesto representa todo lo alcanzado durante el margen de tiempo 
 * **Descripción:** Elimina un libro del inventario mediante su ID.
 
 #### 6. Calcular Conversión de Moneda y Precio
-* **`GET /books/{book_id}/calculate`**
+* **`GET /books/{book_id}/calculate-price`**
 * **Descripción:** Calcula el precio o valor total del libro aplicando la conversión de moneda según el país especificado.
 * **Funcionamiento:** Consulta una **API externa** para obtener la tasa de cambio/moneda del país. En caso de que la API externa no devuelva resultados o falle, implementa un mecanismo de **fallback a una caché local**.
