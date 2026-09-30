@@ -49,6 +49,8 @@ uv run uvicorn app.main:app --reload
 
 El backend quedará disponible por defecto en `http://localhost:8000`.
 
+> **Nota de pruebas:** Para probar y validar el comportamiento de las consultas y la lógica de negocio del backend, **no se utilizó Postman**, sino que se utilizó directamente la interfaz interactiva de **Swagger UI / OpenAPI** provista por FastAPI (disponible en `http://localhost:8000/docs`).
+
 ### 4. Ejecutar el Frontend
 
 Navega a la carpeta del frontend, instala las dependencias (si aún no lo has hecho) y levanta el servidor de desarrollo:
@@ -91,6 +93,13 @@ El único escenario donde no se logró garantizar atomicidad total fue en la ló
 
 ---
 
+### 💡 Caché y Resiliencia en el Cálculo de Moneda
+Para el cálculo de precio por país, el sistema consulta una API externa con un respaldo en caché local cuando la API no responde. 
+
+* **Acercamiento deseado para Producción:** La estrategia óptima pensada para un entorno real de producción era guardar y actualizar en una tabla dedicada de la base de datos la última búsqueda exitosa de cada país/tasa. Esto habría aumentado significativamente la confiabilidad (pues se pudiera actualizar diariamente) y reducido las llamadas externas repetitivas. Sin embargo, este diseño persistente se omitió únicamente por las limitaciones de tiempo del ejercicio (4 horas).
+
+---
+
 ### ⏱️ Alcance del Proyecto (Límite de 4 horas) y Deuda Técnica
 
 El desarrollo expuesto representa todo lo alcanzado durante el margen de tiempo establecido de **4 horas**.
@@ -98,3 +107,48 @@ El desarrollo expuesto representa todo lo alcanzado durante el margen de tiempo 
 * **Frontend y Generación por LLM:** Debido a la restricción de tiempo, no fue posible desarrollar un frontend manual extenso que reflejara completamente todas mis buenas prácticas habituales de UI/UX y arquitectura de software. Relegué la conexión con el backend mediante `useQuery` y el maquetado estilizado con **Tailwind CSS** directamente a un LLM, considerando que era la vía más rápida para validar la integración.
 * **Componentes e Mantenibilidad:** Aunque la intención inicial era integrar **shadcn/ui**, se consideró que el diseño generado por el LLM era suficiente para fines demostrativos. Se reconoce que esto deja el código del cliente menos estructurado y más difícil de mantener de lo que respondería a un estándar de producción.
 * **Detalle omitido en la Paginación:** Al momento de estar construyendo la interfaz en el frontend, me percaté de que olvidé incluir en la respuesta JSON del backend un campo que indique el **número máximo de páginas** (`total_pages`) para una búsqueda dada.
+
+---
+
+## 📚 Documentación de la API (Endpoints)
+
+### Endpoints de Libros (`/books`)
+
+#### 1. Listar Libros (con Filtros y Paginación)
+
+* **`GET /books`**
+* **Descripción:** Retorna el listado de libros. Unifica la búsqueda general, filtrado por categoría, alerta de stock bajo y paginación en una sola ruta.
+* **Query Parameters:**
+* `category` *(opcional, string)*: Filtra los libros por categoría.
+* `threshold` *(opcional, int)*: Filtra libros cuyo stock sea menor o igual al umbral especificado.
+* `page` *(opcional, int, default: 1)*: Número de página para la paginación.
+* `limit` *(opcional, int, default: 10)*: Cantidad de resultados por página.
+
+
+
+#### 2. Obtener Detalle de un Libro
+
+* **`GET /books/{book_id}`**
+* **Descripción:** Obtiene la información detallada de un libro específico mediante su ID.
+
+#### 3. Crear un Libro
+
+* **`POST /books`**
+* **Descripción:** Registra un nuevo libro en el sistema si el ISBN no está registrado.
+
+#### 4. Actualizar un Libro
+
+* **`PUT /books/{book_id}`**
+* **Descripción:** Actualiza completamente los datos de un libro existente si existe.
+
+#### 5. Eliminar un Libro
+
+* **`DELETE /books/{book_id}`**
+* **Descripción:** Elimina un libro del inventario mediante su ID.
+
+#### 6. Calcular Conversión de Moneda y Precio
+* **`GET /books/{book_id}/calculate`**
+* **Descripción:** Calcula el precio o valor total del libro aplicando la conversión de moneda según el país especificado.
+* **Funcionamiento:** Consulta una **API externa** para obtener la tasa de cambio/moneda del país. En caso de que la API externa no devuelva resultados o falle, implementa un mecanismo de **fallback a una caché local**.
+* **Query Parameters:**
+  * `country` *(string)*: País objetivo para determinar la divisa y realizar el cálculo correspondiente.
