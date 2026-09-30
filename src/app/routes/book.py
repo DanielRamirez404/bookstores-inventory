@@ -1,11 +1,20 @@
+import os
+
+import httpx
+from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
 from fastapi.routing import APIRouter
 from sqlalchemy import delete, insert, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.config.db import get_db
+from app.config.path import env_path
 from app.models.book import Book
 from app.schemas.book import BookPayload
+from app.utils.countries import country_to_currency_code, default_rates
+
+_ = load_dotenv(env_path)
 
 book = APIRouter(prefix='/books')
 
@@ -45,16 +54,18 @@ def get_book(id: int, db: Session = Depends(get_db)):
 
 @book.post("/", status_code=status.HTTP_201_CREATED)
 def create_book(payload: BookPayload, db: Session = Depends(get_db)):
-    stmt = (
-        insert(Book)
-        .values(**payload.model_dump())
-        .returning(Book)
-    )
+    stmt = insert(Book).values(**payload.model_dump()).returning(Book)
     
-    book = db.scalars(stmt).first()
-    db.commit()
-    
-    return book
+    try:
+        book = db.scalars(stmt).first()
+        db.commit()
+        return book
+    except IntegrityError:  # esto se lanza si no cumple con la constraint UNIQUE en ISBN
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"A book with ISBN '{payload.isbn}' already exists."
+        )
 
 @book.put("/{id}")
 def update_book(id: int, payload: BookPayload, db: Session = Depends(get_db)):
@@ -90,3 +101,74 @@ def delete_book(id: int, db: Session = Depends(get_db)):
     db.commit()
 
     return deleted_id
+
+@book.get("/{id}/calculate-price", status_code=status.HTTP_200_OK)
+async def get_price(
+    id: int,
+    db: Session = Depends(get_db)
+):
+    api_url = f"https://v6.exchangerate-api.com/v6/{os.environ['EXCHANGE_RATE_API_KEY']}/latest/USD"
+
+    async with httpx.AsyncClient() as client:
+        success: bool = True
+        try:
+            response = await client.get(api_url)
+            _ = response.raise_for_status()
+            data = response.json()
+        except httpx.HTTPError:
+            success = False
+
+    rates = data.get("conversion_rates", {}) if success else default_rates
+
+    supplier_country = db.scalar(select(Book.supplier_country).where(Book.id == id))
+
+    if supplier_country is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Book not found",
+        )
+
+    if supplier_country not in country_to_currency_code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Country '{supplier_country}' is not mapped to a currency",
+        )
+
+    currency = country_to_currency_code[supplier_country]
+
+    if currency not in rates:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Rate for currency '{currency}' missing",
+        )
+
+    rate = rates[currency]
+    calculated_price = round(price * 1.40 * rate, 2) # 40% de ganancia!!!
+
+    stmt = (
+        update(Book)
+        .where(Book.id == id)
+        .values(selling_price_local=calculated_price)
+        .returning(Book)
+    )
+
+    updated_book = db.scalars(stmt).one_or_none()
+
+    if updated_book is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Book not found",
+        )
+
+    db.commit()
+
+    return {
+        "book_id": updated_book.id,
+        "cost_usd": updated_book.cost_usd,
+        "exchange_rate": rate,
+        "cost_local": round(updated_book.cost_usdu * rate, 2),
+        "margin_percentage": 40,
+        "selling_price_local": calculated_price,
+        "currency": currency,
+        "calculation_timestamp": updated_book.updated_at
+    }

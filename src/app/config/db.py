@@ -1,13 +1,13 @@
 import os
-from pathlib import Path
-from typing import ClassVar, Generator
+from typing import ClassVar
 
 from dotenv import load_dotenv
 from sqlalchemy import MetaData, create_engine
 from sqlalchemy.engine import URL
-from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
-env_path = Path(__file__).resolve().parent.parent.parent.parent / ".env"
+from app.config.path import env_path
+
 _ = load_dotenv(env_path)
 
 url = URL.create(
