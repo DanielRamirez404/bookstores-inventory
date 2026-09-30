@@ -35,21 +35,20 @@ docker compose up -d
 ```
 
 ### 3. Ejecutar el Backend (FastAPI)
-
-Instala las dependencias y ejecuta el servidor de desarrollo utilizando `uv`:
+Para iniciar el servidor, navega hasta la carpeta raíz del backend (donde se encuentra el archivo `__init__.py` principal / paquete de la app) y ejecútalo directamente con la CLI de FastAPI a través de `uv`:
 
 ```bash
 # Instalar dependencias del proyecto
 uv sync
 
 # Ejecutar el servidor FastAPI
-uv run uvicorn app.main:app --reload
+uv run fastapi dev app/__init__.py
 
 ```
 
 El backend quedará disponible por defecto en `http://localhost:8000`.
 
-> **Nota de pruebas:** Para probar y validar el comportamiento de las consultas y la lógica de negocio del backend, **no se utilizó Postman**, sino que se utilizó directamente la interfaz interactiva de **Swagger UI / OpenAPI** provista por FastAPI (disponible en `http://localhost:8000/docs`).
+> **Nota de pruebas:** Para probar y validar el comportamiento de las consultas y la lógica de negocio del backend, **no se utilizó Postman**, sino que se recurrió directamente a la interfaz interactiva de **Swagger UI / OpenAPI** provista de forma nativa por FastAPI (disponible en `http://localhost:8000/docs`).
 
 ### 4. Ejecutar el Frontend
 
