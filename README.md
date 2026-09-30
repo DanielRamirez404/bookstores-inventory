@@ -149,5 +149,3 @@ El desarrollo expuesto representa todo lo alcanzado durante el margen de tiempo 
 * **`GET /books/{book_id}/calculate`**
 * **Descripción:** Calcula el precio o valor total del libro aplicando la conversión de moneda según el país especificado.
 * **Funcionamiento:** Consulta una **API externa** para obtener la tasa de cambio/moneda del país. En caso de que la API externa no devuelva resultados o falle, implementa un mecanismo de **fallback a una caché local**.
-* **Query Parameters:**
-  * `country` *(string)*: País objetivo para determinar la divisa y realizar el cálculo correspondiente.
