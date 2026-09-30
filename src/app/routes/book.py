@@ -10,9 +10,23 @@ from app.schemas.book import BookPayload
 book = APIRouter(prefix='/books')
 
 @book.get("/", status_code=status.HTTP_200_OK)
-def get_books(db: Session = Depends(get_db)):
-    query = select(Book)
-    books = db.scalars(query).all()
+def get_books(
+    threshold: int | None = None,
+    category: str | None = None,
+    limit: int = 5,
+    offset: int = 0,
+    db: Session = Depends(get_db)
+):
+    stmt = select(Book)
+    
+    if threshold is not None:
+        stmt = stmt.where(Book.stock_quantity <= threshold)
+    if category is not None:
+        stmt = stmt.where(Book.category == category)
+        
+    stmt = stmt.offset(offset).limit(limit)
+    
+    books = db.scalars(stmt).all()
     
     return books
 
