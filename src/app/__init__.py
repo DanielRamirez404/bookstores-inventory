@@ -1,11 +1,7 @@
 from fastapi import FastAPI
-from sqlalchemy import inspect
 
-from app.config.db import engine
+from app.routes.book import book
 
 app = FastAPI()
 
-
-@app.get("/")
-async def root():
-    return inspect(engine).get_table_names()
+app.include_router(book)

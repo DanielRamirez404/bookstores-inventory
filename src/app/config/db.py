@@ -1,11 +1,11 @@
 import os
 from pathlib import Path
-from typing import ClassVar
+from typing import ClassVar, Generator
 
 from dotenv import load_dotenv
 from sqlalchemy import MetaData, create_engine
 from sqlalchemy.engine import URL
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 env_path = Path(__file__).resolve().parent.parent.parent.parent / ".env"
 _ = load_dotenv(env_path)
@@ -23,7 +23,14 @@ engine = create_engine(url)
 
 meta = MetaData()
 
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
 class Base(DeclarativeBase):
     metadata: ClassVar[MetaData] = meta
 
-conn = engine.connect()
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
